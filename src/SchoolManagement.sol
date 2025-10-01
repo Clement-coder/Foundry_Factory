@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 contract Management {
+    error NotSchoolOwner();
+    error StudentAlreadyExists();
+    error StudentNotFound();
+    error InvalidScore();
+
     struct Student {
         string name;
         uint8 age;
@@ -19,7 +24,7 @@ contract Management {
     mapping(address => mapping(string => uint8)) public scores;
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Not school owner");
+        if (msg.sender != owner) revert NotSchoolOwner();
         _;
     }
 
@@ -38,24 +43,28 @@ contract Management {
     }
 
     function addStudent(address _id, string memory _name, uint8 _age, uint8 _level) external onlyOwner {
-        require(!students[_id].registered, "Student exists");
+        if (students[_id].registered) revert StudentAlreadyExists();
         students[_id] = Student(_name, _age, _level, true);
     }
 
     function promote(address _id) external onlyOwner {
-        require(students[_id].registered, "Student not found");
+        if (!students[_id].registered) revert StudentNotFound();
         students[_id].level += 1;
     }
 
     function scoreStudent(address _id, string memory _subject, uint8 _score) external onlyOwner {
-        require(students[_id].registered, "Student not found");
-        require(_score <= 100, "Invalid score");
+        if (!students[_id].registered) revert StudentNotFound();
+        if (_score > 100) revert InvalidScore();
         scores[_id][_subject] = _score;
     }
 
-    function getReportCard(address _id, string memory _subject) external view returns (string memory, uint8, uint8, uint8) {
-        require(students[_id].registered, "Student not found");
-        Student memory s = students[_id];
+    function getReportCard(address _id, string memory _subject) 
+        external 
+        view 
+        returns (string memory, uint8, uint8, uint8) 
+    {
+        if (!students[_id].registered) revert StudentNotFound();
+    Student memory s = students[_id];
         return (s.name, s.age, s.level, scores[_id][_subject]);
     }
 }
